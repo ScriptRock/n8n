@@ -14,6 +14,7 @@ import './n8n-theme.scss';
 
 import App from '@/App.vue';
 import router from './router';
+import { initEmbeddedAuth } from './embedded-auth';
 
 import { TelemetryPlugin } from './plugins/telemetry';
 import { i18nInstance } from './plugins/i18n';
@@ -57,3 +58,6 @@ if (!import.meta.env.PROD) {
 		console.error(error);
 	};
 }
+
+// Initialize embedded authentication handling
+initEmbeddedAuth();

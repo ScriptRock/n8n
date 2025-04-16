@@ -16,7 +16,7 @@ export interface ITelemetrySettings {
 	config?: ITelemetryClientConfig;
 }
 
-export type AuthenticationMethod = 'email' | 'ldap' | 'saml';
+export type AuthenticationMethod = 'email' | 'ldap' | 'saml' | 'embed';
 
 export interface IUserManagementSettings {
 	quota: number;

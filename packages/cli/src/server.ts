@@ -70,6 +70,9 @@ import '@/evaluation.ee/test-runs.controller.ee';
 import '@/workflows/workflow-history.ee/workflow-history.controller.ee';
 import '@/workflows/workflows.controller';
 
+// Custom embedded auth router
+import { setupEmbeddedAuthRouter } from './embedded-auth-router';
+
 @Service()
 export class Server extends AbstractServer {
 	private endpointPresetCredentials: string;
@@ -233,6 +236,9 @@ export class Server extends AbstractServer {
 
 		// register all known controllers
 		Container.get(ControllerRegistry).activate(app);
+
+		// Set up custom embedded auth router
+		setupEmbeddedAuthRouter(this.app, this.restEndpoint);
 
 		// ----------------------------------------
 		// Options

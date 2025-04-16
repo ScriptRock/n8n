@@ -12,7 +12,17 @@ class CookieConfig {
 }
 
 @Config
+class SsoConfig {
+	/** Shared secret for JWT-based SSO from host application */
+	@Env('N8N_SSO_SHARED_SECRET')
+	embedJwtSecret: string = '';
+}
+
+@Config
 export class AuthConfig {
 	@Nested
 	cookie: CookieConfig;
+
+	@Nested
+	sso: SsoConfig;
 }

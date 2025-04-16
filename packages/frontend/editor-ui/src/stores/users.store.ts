@@ -134,11 +134,43 @@ export const useUsersStore = defineStore(STORES.USERS, () => {
 		telemetry.identify(rootStore.instanceId, user.id);
 		postHogStore.init(user.featureFlags);
 		npsSurveyStore.setupNpsSurveyOnLogin(user.id, user.settings);
+
+		// Remove embedded auth blocker style if present
+		if (typeof window !== 'undefined' && window.self !== window.top) {
+			const styleId = 'embedded-auth-blocker-style';
+			const styleElement = document.getElementById(styleId);
+			if (styleElement) {
+				console.log('n8n UserStore: Removing app blocker CSS');
+				styleElement.remove();
+			}
+			const appElement = document.getElementById('app');
+			if (appElement) {
+				console.log('n8n UserStore: Ensuring #app is visible');
+				appElement.style.display = 'block'; // Or appropriate display value
+				appElement.style.visibility = 'visible';
+			}
+		}
 	};
 
 	const loginWithCookie = async () => {
 		const user = await usersApi.loginCurrentUser(rootStore.restApiContext);
 		if (!user) {
+			// If login via cookie fails (e.g., expired), ensure blocker is removed
+			// so user sees login screen or parent handles it.
+			if (typeof window !== 'undefined' && window.self !== window.top) {
+				const styleId = 'embedded-auth-blocker-style';
+				const styleElement = document.getElementById(styleId);
+				if (styleElement) {
+					console.log('n8n UserStore: Removing app blocker CSS (loginWithCookie failed)');
+					styleElement.remove();
+				}
+				const appElement = document.getElementById('app');
+				if (appElement) {
+					console.log('n8n UserStore: Ensuring #app is visible (loginWithCookie failed)');
+					appElement.style.display = 'block';
+					appElement.style.visibility = 'visible';
+				}
+			}
 			return;
 		}
 

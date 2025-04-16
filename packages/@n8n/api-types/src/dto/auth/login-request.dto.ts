@@ -12,3 +12,7 @@ export class LoginRequestDto extends Z.class({
 	mfaCode: z.string().optional(),
 	mfaRecoveryCode: z.string().optional(),
 }) {}
+
+export class EmbeddedAuthRequestDto extends Z.class({
+	token: z.string().trim(),
+}) {}

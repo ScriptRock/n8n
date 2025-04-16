@@ -1,10 +1,15 @@
-import { LoginRequestDto, ResolveSignupTokenQueryDto } from '@n8n/api-types';
+import {
+	LoginRequestDto,
+	ResolveSignupTokenQueryDto,
+	EmbeddedAuthRequestDto,
+} from '@n8n/api-types';
 import { isEmail } from 'class-validator';
 import { Response } from 'express';
 import { Logger } from 'n8n-core';
 
 import { handleEmailLogin, handleLdapLogin } from '@/auth';
 import { AuthService } from '@/auth/auth.service';
+import { JwtSsoHandler } from '@/auth/jwt-sso.handler';
 import { RESPONSE_ERROR_MESSAGES } from '@/constants';
 import type { User } from '@/databases/entities/user';
 import { UserRepository } from '@/databases/repositories/user.repository';
@@ -35,6 +40,7 @@ export class AuthController {
 		private readonly license: License,
 		private readonly userRepository: UserRepository,
 		private readonly eventService: EventService,
+		private readonly jwtSsoHandler: JwtSsoHandler,
 		private readonly postHog?: PostHogClient,
 	) {}
 
@@ -182,5 +188,46 @@ export class AuthController {
 		await this.authService.invalidateToken(req);
 		this.authService.clearCookie(res);
 		return { loggedOut: true };
+	}
+
+	/** Handle JWT token-based authentication for embedded usage */
+	@Post('/embedded-auth', { skipAuth: true })
+	async embeddedAuth(req: AuthlessRequest, res: Response, @Body payload: EmbeddedAuthRequestDto) {
+		this.logger.info('Embedded auth endpoint called');
+		const token = payload.token;
+
+		if (!token) {
+			this.logger.error('No token provided in embedded auth request');
+			throw new BadRequestError('No authentication token provided');
+		}
+
+		this.logger.debug(`Token received, length: ${token.length}`);
+
+		try {
+			this.logger.info('Processing JWT token for embedded authentication');
+			const user = await this.jwtSsoHandler.handleEmbedAuth(token);
+
+			this.logger.info(`User authenticated successfully: ${user.email} (ID: ${user.id})`);
+
+			// Issue cookie for session
+			this.logger.debug('Issuing auth cookie');
+			this.authService.issueCookie(res, user, req.browserId);
+
+			this.logger.debug('Emitting user-logged-in event');
+			this.eventService.emit('user-logged-in', {
+				user,
+				authenticationMethod: 'embed',
+			});
+
+			this.logger.info('Embedded auth successful, returning user data');
+			return await this.userService.toPublic(user, { posthog: this.postHog, withScopes: true });
+		} catch (error) {
+			this.logger.error('Embedded auth failed', {
+				error,
+				message: error instanceof Error ? error.message : 'Unknown error',
+				stack: error instanceof Error ? error.stack : undefined,
+			});
+			throw new AuthError('Authentication failed');
+		}
 	}
 }
